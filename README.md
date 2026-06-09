@@ -2,179 +2,213 @@
 
 ## Overview
 
-This project reproduces selected findings from the paper **ALBERT: A Lite BERT for Self-supervised Learning of Language Representations** by Lan et al.
+This project reproduces selected findings from **ALBERT: A Lite BERT for Self-supervised Learning of Language Representations** by Lan et al.
 
-The paper proposes ALBERT as a parameter-efficient version of BERT. Its main ideas are:
+The project focuses on three claims:
 
-- factorized embedding parameterization
-- cross-layer parameter sharing
-- Sentence Order Prediction (SOP)
-
-In this project, we focus on the architectural efficiency claims of ALBERT and compare them against BERT in a smaller, reproducible setup.
-
-## Objective
-
-The goal is to validate three main claims:
-
-1. ALBERT achieves performance comparable to BERT while using fewer parameters.
+1. ALBERT can achieve performance comparable to BERT with fewer parameters.
 2. Cross-layer parameter sharing reduces model size with limited performance loss.
-3. Factorized embeddings reduce parameter count without strongly affecting performance.
+3. Factorized embeddings reduce parameter count without strongly hurting performance.
+
+Because the original paper uses large-scale pretraining, this project performs smaller representative experiments on selected GLUE tasks.
 
 ## Datasets
 
-We use two GLUE-style classification tasks.
-
 ### SST-2
 
-Binary sentiment classification.
-
+- Task: binary sentiment classification
 - Input: one sentence
-- Output: positive or negative
 - Metric: accuracy
 
 ### MRPC
 
-Paraphrase detection.
-
+- Task: paraphrase detection
 - Input: sentence pair
-- Output: paraphrase or not paraphrase
 - Metrics: accuracy and F1 score
 
-## Experiment 1: Reproduction
+## Experiments
 
-### Goal
+### Experiment 1: Reproduction
 
-Compare BERT-base and ALBERT-base on downstream task performance and parameter efficiency.
+Compares pretrained BERT-base and ALBERT-base on SST-2 and MRPC.
 
-### Models
+Models:
 
 - `bert-base-uncased`
 - `albert-base-v2`
 
-### Tasks
+Metrics:
 
-- SST-2
-- MRPC
-
-### Metrics
-
-- SST-2 accuracy
-- MRPC accuracy
-- MRPC F1 score
+- accuracy
+- F1 score for MRPC
 - parameter count
 - training time
+- optional GPU memory usage
 
-### Expected Outcome
+Run:
 
-ALBERT-base should achieve performance close to BERT-base while using significantly fewer parameters.
+```bash
+python experiments/reproduction/run_reproduction.py
+```
 
-## Experiment 2: Parameter Sharing Ablation
+Output:
 
-### Goal
+```text
+results/reproduction_results.csv
+```
 
-Analyze how cross-layer parameter sharing affects model size and performance.
+### Experiment 2: Parameter Sharing Ablation
 
-### Configurations
+Compares ALBERT-style parameter sharing configurations.
+
+Configurations:
 
 - no sharing
 - shared attention
 - shared FFN
 - full sharing
 
-### Tasks
+Important: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`, but does not directly support attention-only or FFN-only sharing. These configurations are marked with TODOs and skipped unless custom modeling code is added.
 
-- SST-2
-- MRPC
+Parameter-count run:
 
-### Metrics
+```bash
+python experiments/parameter_sharing/run_parameter_sharing.py --continue_on_todo
+```
 
-- accuracy
-- F1 score
-- parameter count
-- training time
-- optional GPU memory usage
+Optional training run:
 
-### Expected Outcome
+```bash
+python experiments/parameter_sharing/run_parameter_sharing.py --train --continue_on_todo
+```
 
-Full parameter sharing should produce the largest reduction in parameters, with some possible performance loss.
+Output:
 
-## Experiment 3: Factorized Embeddings
+```text
+results/parameter_sharing_results.csv
+```
 
-### Goal
+### Experiment 3: Factorized Embeddings
 
-Analyze whether factorized embeddings reduce parameter count while preserving performance.
+Compares standard embeddings and ALBERT-style factorized embeddings.
 
-### Configurations
+Configurations:
 
 - standard embeddings
 - factorized embeddings
 
-### Tasks
+Parameter-count run:
 
-- SST-2
-- MRPC
+```bash
+python experiments/factorized_embeddings/run_factorized_embeddings.py
+```
 
-### Metrics
+Optional training run:
 
-- accuracy
-- F1 score
-- embedding parameter count
-- total parameter count
+```bash
+python experiments/factorized_embeddings/run_factorized_embeddings.py --train
+```
 
-### Expected Outcome
+Output:
 
-Factorized embeddings should significantly reduce parameter count with only minor performance changes.
+```text
+results/embedding_results.csv
+```
 
-## Results
+## Extension: Low-Data Robustness
 
-### Reproduction Results
+The extension compares BERT-base and ALBERT-base when fine-tuned with different fractions of the training data.
 
-| Model | SST-2 Accuracy | MRPC Accuracy | MRPC F1 | Parameters | Training Time |
-|---|---:|---:|---:|---:|---:|
-| BERT-base | TBD | TBD | TBD | TBD | TBD |
-| ALBERT-base | TBD | TBD | TBD | TBD | TBD |
+Default task: SST-2.
 
-### Parameter Sharing Results
+Fractions:
 
-| Configuration | SST-2 Accuracy | MRPC Accuracy | MRPC F1 | Parameters | Memory Usage |
-|---|---:|---:|---:|---:|---:|
-| No Sharing | TBD | TBD | TBD | TBD | TBD |
-| Shared Attention | TBD | TBD | TBD | TBD | TBD |
-| Shared FFN | TBD | TBD | TBD | TBD | TBD |
-| Full Sharing | TBD | TBD | TBD | TBD | TBD |
+- 10%
+- 25%
+- 50%
+- 100%
 
-### Embedding Results
+Run:
 
-| Configuration | SST-2 Accuracy | MRPC Accuracy | MRPC F1 | Parameters |
-|---|---:|---:|---:|---:|
-| Standard Embeddings | TBD | TBD | TBD | TBD |
-| Factorized Embeddings | TBD | TBD | TBD | TBD |
+```bash
+python experiments/low_data_extension/run_low_data_extension.py
+```
 
-## Planned Figures
+Output:
 
-- BERT vs ALBERT parameter count
-- BERT vs ALBERT task performance
-- Parameter sharing: performance by configuration
-- Parameter sharing: parameter count by configuration
-- Standard vs factorized embeddings: parameter count and performance
+```text
+results/low_data_results.csv
+```
 
-## Repository Structure
+## Project Structure
 
 ```text
 .
-├── README.md
-├── requirements.txt
-├── src/
-│   ├── finetune.py
-│   ├── parameter_count.py
-│   ├── model_configs.py
-│   └── plot_results.py
 ├── configs/
 │   ├── reproduction/
 │   ├── parameter_sharing/
-│   └── factorized_embeddings/
+│   ├── factorized_embeddings/
+│   └── low_data_extension/
+├── experiments/
+│   ├── reproduction/
+│   ├── parameter_sharing/
+│   ├── factorized_embeddings/
+│   └── low_data_extension/
+├── src/
+│   ├── albert_project/
+│   ├── parameter_count.py
+│   └── plot_results.py
+├── scripts/
 ├── results/
-│   ├── reproduction_results.csv
-│   ├── parameter_sharing_results.csv
-│   └── embedding_results.csv
-└── plots/
+├── plots/
+└── docs/
+```
+
+The `experiments/` folders are separated so each person can work on one experiment with minimal Git conflicts.
+
+## Installation
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+On Windows:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Generate Plots
+
+After experiments have produced result CSV files, run:
+
+```bash
+PYTHONPATH=src python src/plot_results.py
+```
+
+or:
+
+```bash
+bash scripts/generate_figures.sh
+```
+
+## Limitations
+
+- Full BookCorpus/Wikipedia pretraining is not reproduced.
+- The reproduction experiment uses pretrained Hugging Face checkpoints.
+- Ablation experiments may use randomly initialized controlled architectures.
+- Attention-only and FFN-only sharing require custom modeling code and are marked as TODO.
+- Results may vary depending on hardware, random seed, and hyperparameters.
+
+## Success Criteria
+
+The project is successful if:
+
+- ALBERT-base performs competitively with BERT-base while using fewer parameters.
+- Parameter sharing clearly reduces model size.
+- Factorized embeddings reduce parameter count.
+- Trends are broadly consistent with the original ALBERT paper.
