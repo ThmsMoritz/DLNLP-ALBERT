@@ -1,0 +1,20 @@
+experiment_name: low_data_extension
+task_name: sst2
+max_length: 128
+epochs: 3
+batch_size: 16
+learning_rate: 2.0e-5
+seed: 42
+save_model: false
+train_fractions:
+  - 0.10
+  - 0.25
+  - 0.50
+  - 1.00
+models:
+  - model_source: pretrained
+    model_name: bert-base-uncased
+    model_label: BERT-base
+  - model_source: pretrained
+    model_name: albert-base-v2
+    model_label: ALBERT-base
