@@ -1,0 +1,21 @@
+experiment_name: parameter_sharing
+configuration: shared_attention
+model_source: from_config
+architecture: albert
+tokenizer_name: albert-base-v2
+model_label: ALBERT-shared-attention
+task_name: sst2
+sharing_strategy: shared_attention
+max_length: 128
+epochs: 3
+batch_size: 16
+learning_rate: 2.0e-5
+seed: 42
+save_model: false
+notes: "TODO: Requires custom modeling code. Hugging Face ALBERT does not directly expose attention-only sharing."
+model_config:
+  embedding_size: 128
+  hidden_size: 768
+  num_hidden_layers: 12
+  num_attention_heads: 12
+  intermediate_size: 3072

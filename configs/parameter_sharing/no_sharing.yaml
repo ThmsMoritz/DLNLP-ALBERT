@@ -1,0 +1,20 @@
+experiment_name: parameter_sharing
+configuration: no_sharing
+model_source: from_config
+architecture: albert
+tokenizer_name: albert-base-v2
+model_label: ALBERT-no-sharing
+task_name: sst2
+sharing_strategy: no_sharing
+max_length: 128
+epochs: 3
+batch_size: 16
+learning_rate: 2.0e-5
+seed: 42
+save_model: false
+model_config:
+  embedding_size: 128
+  hidden_size: 768
+  num_hidden_layers: 12
+  num_attention_heads: 12
+  intermediate_size: 3072
