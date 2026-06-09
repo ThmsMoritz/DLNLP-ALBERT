@@ -1,0 +1,12 @@
+experiment_name: reproduction
+configuration: bert_base_mrpc
+model_source: pretrained
+model_name: bert-base-uncased
+model_label: BERT-base
+task_name: mrpc
+max_length: 128
+epochs: 3
+batch_size: 16
+learning_rate: 2.0e-5
+seed: 42
+save_model: false
