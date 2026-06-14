@@ -45,21 +45,16 @@ def _albert_config_from_project_config(config: dict[str, Any], num_labels: int) 
     model_cfg = dict(config.get("model_config", {}))
     sharing_strategy = config.get("sharing_strategy", "full_sharing")
 
-    if sharing_strategy in {"shared_attention", "shared_ffn"}:
-        raise NotImplementedError(
-            "TODO: Hugging Face AlbertForSequenceClassification supports grouped/full "
-            "sharing via num_hidden_groups, but not attention-only or FFN-only sharing "
-            "out of the box. Implement a custom AlbertLayer variant if these should be "
-            "trained exactly as in the paper."
-        )
-
     num_hidden_layers = int(model_cfg.get("num_hidden_layers", 12))
     if sharing_strategy == "full_sharing":
         model_cfg.setdefault("num_hidden_groups", 1)
-    elif sharing_strategy == "no_sharing":
+    elif sharing_strategy in {"no_sharing", "shared_attention", "shared_ffn"}:
         model_cfg.setdefault("num_hidden_groups", num_hidden_layers)
     else:
-        model_cfg.setdefault("num_hidden_groups", 1)
+        raise ValueError(
+            "sharing_strategy must be one of: no_sharing, shared_attention, "
+            "shared_ffn, full_sharing."
+        )
 
     defaults = {
         "vocab_size": 30000,
@@ -79,6 +74,25 @@ def _albert_config_from_project_config(config: dict[str, Any], num_labels: int) 
     defaults.update(model_cfg)
     defaults["num_labels"] = num_labels
     return AlbertConfig(**defaults)
+
+
+def _apply_albert_partial_sharing(model: AlbertForSequenceClassification, sharing_strategy: str) -> None:
+    """Tie selected ALBERT layer modules for partial sharing ablations."""
+    if sharing_strategy not in {"shared_attention", "shared_ffn"}:
+        return
+
+    layer_groups = model.albert.encoder.albert_layer_groups
+    if not layer_groups:
+        raise ValueError("ALBERT model has no layer groups to share.")
+
+    shared_layer = layer_groups[0].albert_layers[0]
+    for layer_group in layer_groups[1:]:
+        layer = layer_group.albert_layers[0]
+        if sharing_strategy == "shared_attention":
+            layer.attention = shared_layer.attention
+        elif sharing_strategy == "shared_ffn":
+            layer.ffn = shared_layer.ffn
+            layer.ffn_output = shared_layer.ffn_output
 
 
 def _bert_config_from_project_config(config: dict[str, Any], num_labels: int) -> BertConfig:
@@ -128,6 +142,7 @@ def load_model_and_tokenizer(config: dict[str, Any], num_labels: int) -> LoadedM
         if architecture == "albert":
             hf_config = _albert_config_from_project_config(config, num_labels)
             model = AlbertForSequenceClassification(hf_config)
+            _apply_albert_partial_sharing(model, config.get("sharing_strategy", "full_sharing"))
         elif architecture == "bert":
             hf_config = _bert_config_from_project_config(config, num_labels)
             model = BertForSequenceClassification(hf_config)

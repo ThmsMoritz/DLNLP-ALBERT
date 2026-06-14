@@ -4,18 +4,18 @@ Owner: Person responsible for the parameter-sharing experiment.
 
 This folder contains the script for comparing ALBERT-style parameter sharing configurations.
 
-Important: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`, but not attention-only or FFN-only sharing directly. Those configurations are marked as TODO and skipped when running with `--continue_on_todo`.
+Implementation note: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`. This project implements attention-only and FFN-only sharing by constructing separate ALBERT layer groups and tying the selected submodules across groups.
 
 Parameter counts only:
 
 ```bash
-python experiments/parameter_sharing/run_parameter_sharing.py --continue_on_todo
+python experiments/parameter_sharing/run_parameter_sharing.py
 ```
 
 Optional training from random initialization:
 
 ```bash
-python experiments/parameter_sharing/run_parameter_sharing.py --train --continue_on_todo
+python experiments/parameter_sharing/run_parameter_sharing.py --train
 ```
 
 Results are written to:

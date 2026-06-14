@@ -111,18 +111,18 @@ Configurations:
 - shared FFN
 - full sharing
 
-Important: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`, but does not directly support attention-only or FFN-only sharing. These configurations are marked with TODOs and skipped unless custom modeling code is added.
+Implementation note: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`. This project implements attention-only and FFN-only sharing by constructing separate ALBERT layer groups and tying the selected submodules across groups.
 
 Parameter-count run:
 
 ```bash
-python experiments/parameter_sharing/run_parameter_sharing.py --continue_on_todo
+python experiments/parameter_sharing/run_parameter_sharing.py
 ```
 
 Optional training run:
 
 ```bash
-python experiments/parameter_sharing/run_parameter_sharing.py --train --continue_on_todo
+python experiments/parameter_sharing/run_parameter_sharing.py --train
 ```
 
 Output:
@@ -267,7 +267,7 @@ bash scripts/generate_figures.sh
 - Full BookCorpus/Wikipedia pretraining is not reproduced.
 - The reproduction experiment uses pretrained Hugging Face checkpoints and fine-tunes task-specific classification heads.
 - Ablation experiments may use randomly initialized controlled architectures.
-- Attention-only and FFN-only sharing require custom modeling code and are marked as TODO.
+- Attention-only and FFN-only sharing are implemented with module tying rather than separate pretrained checkpoints.
 - Results may vary depending on hardware, random seed, and hyperparameters.
 
 ## Success Criteria

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from datasets import DatasetDict, load_dataset
 from transformers import PreTrainedTokenizerBase
@@ -60,18 +61,17 @@ TASKS: dict[str, TaskSpec] = {
     ),
 }
 
+
 TASK_ALIASES = {
-    "sst-2": "sst2",
     "sst2": "sst2",
+    "sst-2": "sst2",
     "mrpc": "mrpc",
     "rte": "rte",
     "mnli": "mnli",
     "mnli-m": "mnli",
     "mnli-matched": "mnli",
-    "mnli_matched": "mnli",
     "mnli-mm": "mnli-mm",
     "mnli-mismatched": "mnli-mm",
-    "mnli_mismatched": "mnli-mm",
 }
 
 
@@ -90,13 +90,7 @@ def get_task_spec(task_name: str) -> TaskSpec:
 
 
 def load_glue_task(task_name: str) -> DatasetDict:
-    """Load a supported GLUE task from Hugging Face datasets.
-
-    Newer versions of huggingface_hub validate Hub URIs strictly and reject
-    canonical one-part dataset ids such as ``glue`` when they are converted to
-    ``hf://datasets/glue`` internally. Use the explicit namespaced dataset repo
-    instead.
-    """
+    """Load a supported GLUE task from Hugging Face datasets."""
     spec = get_task_spec(task_name)
     return load_dataset(GLUE_DATASET_ID, spec.hf_name)
 
@@ -116,6 +110,7 @@ def select_train_fraction(dataset_dict: DatasetDict, fraction: float, seed: int)
     train = dataset_dict["train"]
     subset_size = max(1, int(len(train) * fraction))
     shuffled = train.shuffle(seed=seed)
+
     dataset_dict = DatasetDict(dataset_dict)
     dataset_dict["train"] = shuffled.select(range(subset_size))
     return dataset_dict
@@ -147,7 +142,9 @@ def limit_dataset_splits(
         if max_eval_samples <= 0:
             raise ValueError("max_eval_samples must be positive when provided.")
         validation = dataset_dict[validation_split].shuffle(seed=seed)
-        dataset_dict[validation_split] = validation.select(range(min(max_eval_samples, len(validation))))
+        dataset_dict[validation_split] = validation.select(
+            range(min(max_eval_samples, len(validation)))
+        )
 
     return dataset_dict
 
@@ -158,10 +155,10 @@ def tokenize_dataset(
     task_name: str,
     max_length: int,
 ) -> DatasetDict:
-    """Tokenize train and validation splits for supported GLUE tasks."""
+    """Tokenize splits for supported GLUE tasks."""
     spec = get_task_spec(task_name)
 
-    def preprocess(batch: dict) -> dict:
+    def preprocess(batch: dict[str, Any]) -> dict[str, Any]:
         if len(spec.text_columns) == 1:
             return tokenizer(
                 batch[spec.text_columns[0]],
@@ -169,6 +166,7 @@ def tokenize_dataset(
                 padding="max_length",
                 max_length=max_length,
             )
+
         return tokenizer(
             batch[spec.text_columns[0]],
             batch[spec.text_columns[1]],
@@ -178,9 +176,15 @@ def tokenize_dataset(
         )
 
     tokenized = dataset_dict.map(preprocess, batched=True)
+
     columns_to_keep = {"input_ids", "attention_mask", "token_type_ids", "label"}
     for split in tokenized.keys():
-        remove_columns = [c for c in tokenized[split].column_names if c not in columns_to_keep]
+        remove_columns = [
+            column
+            for column in tokenized[split].column_names
+            if column not in columns_to_keep
+        ]
         if remove_columns:
             tokenized[split] = tokenized[split].remove_columns(remove_columns)
+
     return tokenized

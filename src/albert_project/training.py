@@ -75,6 +75,7 @@ def _build_training_args(
         fp16=fp16,
         load_best_model_at_end=False,
     )
+
     try:
         return TrainingArguments(eval_strategy="epoch", **common)
     except TypeError:
@@ -85,10 +86,12 @@ def run_finetuning_experiment(config: dict[str, Any]) -> dict[str, Any]:
     """Run one fine-tuning experiment and return a flat result dictionary."""
     task_name = config.get("task_name", "sst2")
     spec = get_task_spec(task_name)
+
     seed = int(config.get("seed", 42))
     set_global_seed(seed)
 
     train_fraction = float(config.get("train_fraction", 1.0))
+
     max_train_samples = config.get("max_train_samples")
     max_eval_samples = config.get("max_eval_samples")
     max_train_samples = int(max_train_samples) if max_train_samples is not None else None
@@ -120,7 +123,13 @@ def run_finetuning_experiment(config: dict[str, Any]) -> dict[str, Any]:
         max_train_samples=max_train_samples,
         max_eval_samples=max_eval_samples,
     )
-    tokenized = tokenize_dataset(raw_dataset, tokenizer, task_name=task_name, max_length=max_length)
+
+    tokenized = tokenize_dataset(
+        raw_dataset,
+        tokenizer,
+        task_name=task_name,
+        max_length=max_length,
+    )
 
     output_dir = config.get(
         "output_dir",
@@ -167,6 +176,7 @@ def run_finetuning_experiment(config: dict[str, Any]) -> dict[str, Any]:
     start = time.perf_counter()
     trainer.train()
     training_time_seconds = time.perf_counter() - start
+
     metrics = trainer.evaluate()
 
     gpu_memory_mb = None
