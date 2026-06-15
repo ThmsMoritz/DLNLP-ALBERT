@@ -100,36 +100,62 @@ Output:
 results/reproduction_results.csv
 ```
 
-### Experiment 2: Parameter Sharing Ablation
+# Experiment 2: Parameter Sharing Ablation
 
-Compares ALBERT-style parameter sharing configurations.
+This experiment evaluates ALBERT's cross-layer parameter sharing mechanism by comparing four sharing strategies:
 
-Configurations:
+* No Sharing
+* Shared Attention
+* Shared FFN
+* Full Sharing (standard ALBERT)
 
-- no sharing
-- shared attention
-- shared FFN
-- full sharing
+The implementation extends the standard Hugging Face ALBERT architecture by supporting attention-only and FFN-only sharing through selective parameter tying across ALBERT layer groups.
 
-Implementation note: Hugging Face ALBERT supports full/grouped sharing through `num_hidden_groups`. This project implements attention-only and FFN-only sharing by constructing separate ALBERT layer groups and tying the selected submodules across groups.
+Experiments were conducted on two GLUE benchmark tasks:
 
-Parameter-count run:
+* SST-2 (sentiment classification)
+* MRPC (paraphrase detection)
+
+## Running the Experiment
+
+### Parameter Count Comparison
+
+Compute parameter statistics without training:
 
 ```bash
 python experiments/parameter_sharing/run_parameter_sharing.py
 ```
 
-Optional training run:
+### SST-2 Fine-Tuning
+
+Run all parameter-sharing configurations on SST-2:
 
 ```bash
 python experiments/parameter_sharing/run_parameter_sharing.py --train
 ```
 
-Output:
+### MRPC Fine-Tuning
+
+Run all parameter-sharing configurations on MRPC:
+
+```bash
+python experiments/parameter_sharing/run_parameter_sharing.py --train \
+  --config configs/parameter_sharing/no_sharing_mrpc.yaml \
+  --config configs/parameter_sharing/shared_attention_mrpc.yaml \
+  --config configs/parameter_sharing/shared_ffn_mrpc.yaml \
+  --config configs/parameter_sharing/full_sharing_mrpc.yaml
+```
+
+## Outputs
+
+Results are appended to:
 
 ```text
 results/parameter_sharing_results.csv
 ```
+
+The generated results include parameter counts, evaluation metrics, training time, and GPU memory usage for each configuration.
+
 
 ### Experiment 3: Factorized Embeddings
 
