@@ -100,9 +100,9 @@ Output:
 results/reproduction_results.csv
 ```
 
-# Experiment 2: Parameter Sharing Ablation
+### Experiment 2: Parameter Sharing Ablation
 
-This experiment evaluates ALBERT's cross-layer parameter sharing mechanism by comparing four sharing strategies:
+This experiment evaluates ALBERT's cross-layer parameter sharing mechanism by comparing multiple sharing strategies:
 
 * No Sharing
 * Shared Attention
@@ -111,14 +111,30 @@ This experiment evaluates ALBERT's cross-layer parameter sharing mechanism by co
 
 The implementation extends the standard Hugging Face ALBERT architecture by supporting attention-only and FFN-only sharing through selective parameter tying across ALBERT layer groups.
 
+#### Extension: Layer-Position Parameter Sharing
+
+To further investigate the role of parameter sharing within the transformer stack, an architectural extension was implemented:
+
+* Lower-Half Sharing
+
+  * Layers 1–6 share attention and FFN parameters
+  * Layers 7–12 remain independent
+
+* Upper-Half Sharing
+
+  * Layers 1–6 remain independent
+  * Layers 7–12 share attention and FFN parameters
+
+This extension evaluates whether the position of parameter sharing within the network affects downstream task performance.
+
 Experiments were conducted on two GLUE benchmark tasks:
 
 * SST-2 (sentiment classification)
 * MRPC (paraphrase detection)
 
-## Running the Experiment
+#### Running the Experiment
 
-### Parameter Count Comparison
+#### Parameter Count Comparison
 
 Compute parameter statistics without training:
 
@@ -126,7 +142,7 @@ Compute parameter statistics without training:
 python experiments/parameter_sharing/run_parameter_sharing.py
 ```
 
-### SST-2 Fine-Tuning
+#### SST-2 Fine-Tuning
 
 Run all parameter-sharing configurations on SST-2:
 
@@ -134,9 +150,17 @@ Run all parameter-sharing configurations on SST-2:
 python experiments/parameter_sharing/run_parameter_sharing.py --train
 ```
 
-### MRPC Fine-Tuning
+Run only the layer-position sharing extension:
 
-Run all parameter-sharing configurations on MRPC:
+```bash
+python experiments/parameter_sharing/run_parameter_sharing.py --train \
+  --config configs/parameter_sharing/lower_half_sharing.yaml \
+  --config configs/parameter_sharing/upper_half_sharing.yaml
+```
+
+#### MRPC Fine-Tuning
+
+Run the original parameter-sharing configurations on MRPC:
 
 ```bash
 python experiments/parameter_sharing/run_parameter_sharing.py --train \
@@ -146,7 +170,15 @@ python experiments/parameter_sharing/run_parameter_sharing.py --train \
   --config configs/parameter_sharing/full_sharing_mrpc.yaml
 ```
 
-## Outputs
+Run the layer-position sharing extension on MRPC:
+
+```bash
+python experiments/parameter_sharing/run_parameter_sharing.py --train \
+  --config configs/parameter_sharing/lower_half_sharing_mrpc.yaml \
+  --config configs/parameter_sharing/upper_half_sharing_mrpc.yaml
+```
+
+Outputs:
 
 Results are appended to:
 
@@ -154,7 +186,7 @@ Results are appended to:
 results/parameter_sharing_results.csv
 ```
 
-The generated results include parameter counts, evaluation metrics, training time, and GPU memory usage for each configuration.
+The generated results include parameter counts, evaluation metrics, training time, GPU memory usage, and task-specific metrics (e.g., F1 score for MRPC) for each configuration.
 
 
 ### Experiment 3: Factorized Embeddings
