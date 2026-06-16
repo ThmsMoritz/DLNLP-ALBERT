@@ -48,12 +48,18 @@ def _albert_config_from_project_config(config: dict[str, Any], num_labels: int) 
     num_hidden_layers = int(model_cfg.get("num_hidden_layers", 12))
     if sharing_strategy == "full_sharing":
         model_cfg.setdefault("num_hidden_groups", 1)
-    elif sharing_strategy in {"no_sharing", "shared_attention", "shared_ffn"}:
+    elif sharing_strategy in {
+        "no_sharing",
+        "shared_attention",
+        "shared_ffn",
+        "lower_half_sharing",
+        "upper_half_sharing",
+    }:
         model_cfg.setdefault("num_hidden_groups", num_hidden_layers)
     else:
         raise ValueError(
             "sharing_strategy must be one of: no_sharing, shared_attention, "
-            "shared_ffn, full_sharing."
+            "shared_ffn, lower_half_sharing, upper_half_sharing, full_sharing."
         )
 
     defaults = {
@@ -76,20 +82,48 @@ def _albert_config_from_project_config(config: dict[str, Any], num_labels: int) 
     return AlbertConfig(**defaults)
 
 
-def _apply_albert_partial_sharing(model: AlbertForSequenceClassification, sharing_strategy: str) -> None:
+def _apply_albert_partial_sharing(model: AlbertForSequenceClassification,sharing_strategy: str,)-> None:
     """Tie selected ALBERT layer modules for partial sharing ablations."""
-    if sharing_strategy not in {"shared_attention", "shared_ffn"}:
+    if sharing_strategy not in {
+        "shared_attention",
+        "shared_ffn",
+        "lower_half_sharing",
+        "upper_half_sharing",
+    }:
         return
 
     layer_groups = model.albert.encoder.albert_layer_groups
     if not layer_groups:
         raise ValueError("ALBERT model has no layer groups to share.")
 
+    if sharing_strategy == "lower_half_sharing":
+        shared_layer = layer_groups[0].albert_layers[0]
+
+        for layer_group in layer_groups[1:6]:
+            layer = layer_group.albert_layers[0]
+            layer.attention = shared_layer.attention
+            layer.ffn = shared_layer.ffn
+            layer.ffn_output = shared_layer.ffn_output
+        return
+
+    if sharing_strategy == "upper_half_sharing":
+        shared_layer = layer_groups[6].albert_layers[0]
+
+        for layer_group in layer_groups[7:]:
+            layer = layer_group.albert_layers[0]
+            layer.attention = shared_layer.attention
+            layer.ffn = shared_layer.ffn
+            layer.ffn_output = shared_layer.ffn_output
+        return
+
     shared_layer = layer_groups[0].albert_layers[0]
+
     for layer_group in layer_groups[1:]:
         layer = layer_group.albert_layers[0]
+
         if sharing_strategy == "shared_attention":
             layer.attention = shared_layer.attention
+
         elif sharing_strategy == "shared_ffn":
             layer.ffn = shared_layer.ffn
             layer.ffn_output = shared_layer.ffn_output

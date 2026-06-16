@@ -1,0 +1,23 @@
+experiment_name: parameter_sharing_smoke
+configuration: smoke_upper_half_sharing
+model_source: from_config
+architecture: albert
+tokenizer_name: albert-base-v2
+model_label: ALBERT-smoke-upper-half-sharing
+task_name: sst2
+sharing_strategy: upper_half_sharing
+max_length: 64
+epochs: 1
+batch_size: 4
+learning_rate: 2.0e-5
+seed: 42
+save_model: false
+max_train_samples: 32
+max_eval_samples: 32
+
+model_config:
+  embedding_size: 64
+  hidden_size: 128
+  num_hidden_layers: 12
+  num_attention_heads: 4
+  intermediate_size: 256

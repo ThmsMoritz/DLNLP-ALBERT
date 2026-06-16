@@ -18,6 +18,8 @@ DEFAULT_CONFIGS = [
     "configs/parameter_sharing/shared_attention.yaml",
     "configs/parameter_sharing/shared_ffn.yaml",
     "configs/parameter_sharing/full_sharing.yaml",
+    "configs/parameter_sharing/lower_half_sharing.yaml",
+    "configs/parameter_sharing/upper_half_sharing.yaml",
 ]
 
 
@@ -31,9 +33,9 @@ def parse_args() -> argparse.Namespace:
         help="Actually fine-tune from config. Without this flag only parameter counts are produced.",
     )
     parser.add_argument(
-        "--continue_on_todo",
+        "--continue",
         action="store_true",
-        help="Skip TODO/unsupported configs instead of stopping.",
+        help="/unsupported configs instead of stopping.",
     )
     return parser.parse_args()
 
@@ -47,7 +49,7 @@ def main() -> None:
         try:
             result = run_finetuning_experiment(config) if args.train else parameter_summary(config)
         except NotImplementedError as error:
-            message = f"TODO skipped for {config_path}: {error}"
+            message = f"skipped for {config_path}: {error}"
             if not args.continue_on_todo:
                 raise
             print(message)
@@ -55,8 +57,8 @@ def main() -> None:
                 "experiment_name": "parameter_sharing",
                 "configuration": config.get("configuration", config_path),
                 "task_name": config.get("task_name", "sst2"),
-                "parameters": "TODO",
-                "embedding_parameters": "TODO",
+                "parameters": "",
+                "embedding_parameters": "",
                 "notes": message,
             }
         append_result_csv(PROJECT_ROOT / args.results, result)
