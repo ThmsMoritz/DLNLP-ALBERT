@@ -26,16 +26,43 @@ Because the original paper uses large-scale pretraining, this project performs s
 - Input: sentence pair
 - Metrics: accuracy and F1 score
 
+### RTE
+
+- Task: textual entailment
+- Input: sentence pair
+- Metric: accuracy
+
+### MNLI
+
+- Task: natural language inference
+- Input: premise and hypothesis
+- Metric: accuracy
+- Default validation split: `validation_matched`
+
 ## Experiments
 
 ### Experiment 1: Reproduction
 
-Compares pretrained BERT-base and ALBERT-base on SST-2 and MRPC.
+Compares pretrained BERT-base and ALBERT-base on selected GLUE tasks: SST-2, MRPC, RTE, and MNLI.
 
 Models:
 
 - `bert-base-uncased`
 - `albert-base-v2`
+
+Default configuration matrix:
+
+```text
+configs/reproduction/reproduction_matrix.yaml
+```
+
+Optional ALBERT size-scaling matrix:
+
+```text
+configs/reproduction/albert_size_scaling_matrix.yaml
+```
+
+This optional matrix compares `albert-base-v2`, `albert-large-v2`, and `albert-xlarge-v2` on SST-2, RTE, and MNLI. It is more expensive than the default baseline comparison.
 
 Metrics:
 
@@ -49,6 +76,22 @@ Run:
 
 ```bash
 python experiments/reproduction/run_reproduction.py
+```
+
+Useful subset runs:
+
+```bash
+# Inspect the expanded model × task grid.
+python experiments/reproduction/run_reproduction.py --list-configs
+
+# Verify the pipeline with tiny subsets before launching expensive runs.
+python experiments/reproduction/run_reproduction.py --smoke-test
+
+# Run only one task.
+python experiments/reproduction/run_reproduction.py --only-task sst2
+
+# Run only one model family.
+python experiments/reproduction/run_reproduction.py --only-model albert
 ```
 
 Output:
@@ -199,7 +242,7 @@ bash scripts/generate_figures.sh
 ## Limitations
 
 - Full BookCorpus/Wikipedia pretraining is not reproduced.
-- The reproduction experiment uses pretrained Hugging Face checkpoints.
+- The reproduction experiment uses pretrained Hugging Face checkpoints and fine-tunes task-specific classification heads.
 - Ablation experiments may use randomly initialized controlled architectures.
 - Attention-only and FFN-only sharing require custom modeling code and are marked as TODO.
 - Results may vary depending on hardware, random seed, and hyperparameters.
