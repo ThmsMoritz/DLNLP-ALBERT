@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
 
 from datasets import DatasetDict, load_dataset
 from transformers import PreTrainedTokenizerBase
@@ -14,6 +13,11 @@ class TaskSpec:
     text_columns: tuple[str, ...]
     num_labels: int
     metric_names: tuple[str, ...]
+    train_split: str = "train"
+    validation_split: str = "validation"
+
+
+GLUE_DATASET_ID = "nyu-mll/glue"
 
 
 TASKS: dict[str, TaskSpec] = {
@@ -31,13 +35,53 @@ TASKS: dict[str, TaskSpec] = {
         num_labels=2,
         metric_names=("accuracy", "f1"),
     ),
+    "rte": TaskSpec(
+        name="rte",
+        hf_name="rte",
+        text_columns=("sentence1", "sentence2"),
+        num_labels=2,
+        metric_names=("accuracy",),
+    ),
+    "mnli": TaskSpec(
+        name="mnli",
+        hf_name="mnli",
+        text_columns=("premise", "hypothesis"),
+        num_labels=3,
+        metric_names=("accuracy",),
+        validation_split="validation_matched",
+    ),
+    "mnli-mm": TaskSpec(
+        name="mnli-mm",
+        hf_name="mnli",
+        text_columns=("premise", "hypothesis"),
+        num_labels=3,
+        metric_names=("accuracy",),
+        validation_split="validation_mismatched",
+    ),
+}
+
+TASK_ALIASES = {
+    "sst-2": "sst2",
+    "sst2": "sst2",
+    "mrpc": "mrpc",
+    "rte": "rte",
+    "mnli": "mnli",
+    "mnli-m": "mnli",
+    "mnli-matched": "mnli",
+    "mnli_matched": "mnli",
+    "mnli-mm": "mnli-mm",
+    "mnli-mismatched": "mnli-mm",
+    "mnli_mismatched": "mnli-mm",
 }
 
 
+def normalize_task_name(task_name: str) -> str:
+    normalized = task_name.strip().lower().replace("_", "-")
+    return TASK_ALIASES.get(normalized, normalized)
+
+
 def get_task_spec(task_name: str) -> TaskSpec:
-    normalized = task_name.lower().replace("-", "")
-    if normalized == "sst2":
-        normalized = "sst2"
+    normalized = normalize_task_name(task_name)
     if normalized not in TASKS:
         raise ValueError(
             f"Unsupported task '{task_name}'. Supported tasks: {', '.join(sorted(TASKS))}."
@@ -46,9 +90,15 @@ def get_task_spec(task_name: str) -> TaskSpec:
 
 
 def load_glue_task(task_name: str) -> DatasetDict:
-    """Load a GLUE task from Hugging Face datasets."""
+    """Load a supported GLUE task from Hugging Face datasets.
+
+    Newer versions of huggingface_hub validate Hub URIs strictly and reject
+    canonical one-part dataset ids such as ``glue`` when they are converted to
+    ``hf://datasets/glue`` internally. Use the explicit namespaced dataset repo
+    instead.
+    """
     spec = get_task_spec(task_name)
-    return load_dataset("glue", spec.hf_name)
+    return load_dataset(GLUE_DATASET_ID, spec.hf_name)
 
 
 def select_train_fraction(dataset_dict: DatasetDict, fraction: float, seed: int) -> DatasetDict:
@@ -71,16 +121,47 @@ def select_train_fraction(dataset_dict: DatasetDict, fraction: float, seed: int)
     return dataset_dict
 
 
+def limit_dataset_splits(
+    dataset_dict: DatasetDict,
+    *,
+    seed: int,
+    train_split: str = "train",
+    validation_split: str = "validation",
+    max_train_samples: int | None = None,
+    max_eval_samples: int | None = None,
+) -> DatasetDict:
+    """Optionally limit train/eval splits for quick smoke tests.
+
+    Full experiments should leave these values unset. They are useful for
+    verifying the pipeline before launching long fine-tuning runs.
+    """
+    dataset_dict = DatasetDict(dataset_dict)
+
+    if max_train_samples is not None:
+        if max_train_samples <= 0:
+            raise ValueError("max_train_samples must be positive when provided.")
+        train = dataset_dict[train_split].shuffle(seed=seed)
+        dataset_dict[train_split] = train.select(range(min(max_train_samples, len(train))))
+
+    if max_eval_samples is not None:
+        if max_eval_samples <= 0:
+            raise ValueError("max_eval_samples must be positive when provided.")
+        validation = dataset_dict[validation_split].shuffle(seed=seed)
+        dataset_dict[validation_split] = validation.select(range(min(max_eval_samples, len(validation))))
+
+    return dataset_dict
+
+
 def tokenize_dataset(
     dataset_dict: DatasetDict,
     tokenizer: PreTrainedTokenizerBase,
     task_name: str,
     max_length: int,
 ) -> DatasetDict:
-    """Tokenize train and validation splits for SST-2 or MRPC."""
+    """Tokenize train and validation splits for supported GLUE tasks."""
     spec = get_task_spec(task_name)
 
-    def preprocess(batch: dict[str, Any]) -> dict[str, Any]:
+    def preprocess(batch: dict) -> dict:
         if len(spec.text_columns) == 1:
             return tokenizer(
                 batch[spec.text_columns[0]],
