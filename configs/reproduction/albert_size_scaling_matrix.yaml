@@ -1,0 +1,27 @@
+experiment_name: reproduction_albert_size_scaling
+
+common:
+  max_length: 128
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2.0e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.0
+  seed: 42
+  save_model: false
+
+models:
+  - model_source: pretrained
+    model_name: albert-base-v2
+    model_label: ALBERT-base
+  - model_source: pretrained
+    model_name: albert-large-v2
+    model_label: ALBERT-large
+  - model_source: pretrained
+    model_name: albert-xlarge-v2
+    model_label: ALBERT-xlarge
+
+tasks:
+  - task_name: sst2
+  - task_name: rte
+  - task_name: mnli

@@ -1,0 +1,27 @@
+experiment_name: reproduction
+
+common:
+  max_length: 128
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2.0e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.0
+  seed: 42
+  save_model: false
+
+models:
+  - model_source: pretrained
+    model_name: bert-base-uncased
+    model_label: BERT-base
+  - model_source: pretrained
+    model_name: albert-base-v2
+    model_label: ALBERT-base
+
+tasks:
+  - task_name: sst2
+  - task_name: mrpc
+  - task_name: rte
+  - task_name: mnli
+    # GLUE MNLI has two validation sets. The implementation uses validation_matched
+    # for task_name=mnli. Use task_name=mnli-mm for validation_mismatched if needed.
