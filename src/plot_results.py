@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from albert_project.plotting import plot_ablation_results, plot_reproduction_results
+from albert_project.plotting import plot_ablation_results, plot_low_data_results, plot_reproduction_results
 
 
 if __name__ == "__main__":
@@ -13,4 +13,4 @@ if __name__ == "__main__":
     if Path("results/embedding_results.csv").exists():
         plot_ablation_results("results/embedding_results.csv", "embedding_ablation")
     if Path("results/low_data_results.csv").exists():
-        plot_ablation_results("results/low_data_results.csv", "low_data")
+        plot_low_data_results("results/low_data_results.csv")

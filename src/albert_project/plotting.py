@@ -56,6 +56,47 @@ def plot_reproduction_results(csv_path: str, output_dir: str = "plots") -> None:
             plt.close()
 
 
+def plot_low_data_results(csv_path: str, output_dir: str = "plots") -> None:
+    df = pd.read_csv(csv_path)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    required_columns = {"task_name", "model_label", "train_fraction"}
+    if not required_columns.issubset(df.columns):
+        return
+
+    df["train_fraction"] = _numeric_column(df, "train_fraction")
+    df = df.dropna(subset=["train_fraction"])
+
+    for metric in ("accuracy", "f1"):
+        if metric not in df.columns:
+            continue
+
+        metric_df = df.copy()
+        metric_df[metric] = _numeric_column(metric_df, metric)
+        metric_df = metric_df.dropna(subset=[metric])
+        if metric_df.empty:
+            continue
+
+        for task_name, task_df in metric_df.groupby("task_name"):
+            pivot = task_df.pivot_table(
+                index="train_fraction",
+                columns="model_label",
+                values=metric,
+                aggfunc="mean",
+            ).sort_index()
+            if pivot.empty:
+                continue
+
+            pivot.plot(marker="o")
+            plt.xlabel("Training data fraction")
+            plt.ylabel(f"Validation {metric.upper()}")
+            plt.title(f"Low-data robustness on {task_name.upper()} ({metric.upper()})")
+            plt.xticks(pivot.index, [f"{int(round(value * 100))}%" for value in pivot.index])
+            plt.tight_layout()
+            plt.savefig(Path(output_dir) / f"low_data_{task_name}_{metric}.png")
+            plt.close()
+
+
 def plot_ablation_results(csv_path: str, output_prefix: str, output_dir: str = "plots") -> None:
     df = pd.read_csv(csv_path)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
