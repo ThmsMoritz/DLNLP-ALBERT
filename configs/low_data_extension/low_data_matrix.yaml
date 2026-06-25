@@ -1,0 +1,30 @@
+experiment_name: low_data_extension
+
+common:
+  max_length: 128
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2.0e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.0
+  seed: 42
+  save_model: false
+
+models:
+  - model_source: pretrained
+    model_name: bert-base-uncased
+    model_label: BERT-base
+  - model_source: pretrained
+    model_name: albert-base-v2
+    model_label: ALBERT-base
+
+tasks:
+  - task_name: sst2
+  - task_name: mrpc
+  - task_name: rte
+  - task_name: mnli
+
+train_fractions:
+  - 0.10
+  - 0.25
+  - 0.50
