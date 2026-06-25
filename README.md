@@ -160,21 +160,44 @@ results/embedding_results.csv
 
 ## Extension: Low-Data Robustness
 
-The extension compares BERT-base and ALBERT-base when fine-tuned with different fractions of the training data.
+The extension compares BERT-base and ALBERT-base on the same GLUE tasks as the reproduction experiment, but with reduced training-data fractions.
 
-Default task: SST-2.
+Tasks:
+
+- SST-2
+- MRPC
+- RTE
+- MNLI (`validation_matched`)
 
 Fractions:
 
 - 10%
 - 25%
 - 50%
-- 100%
+
+Default configuration matrix:
+
+```text
+configs/low_data_extension/low_data_matrix.yaml
+```
 
 Run:
 
 ```bash
 python experiments/low_data_extension/run_low_data_extension.py
+```
+
+Useful subset runs:
+
+```bash
+# Inspect the expanded model × task × fraction grid.
+python experiments/low_data_extension/run_low_data_extension.py --list-configs
+
+# Verify the pipeline with tiny subsets before launching expensive runs.
+python experiments/low_data_extension/run_low_data_extension.py --smoke-test
+
+# Run only one task/fraction/model combination.
+python experiments/low_data_extension/run_low_data_extension.py --only-task sst2 --only-fraction 0.1 --only-model albert-base-v2
 ```
 
 Output:
