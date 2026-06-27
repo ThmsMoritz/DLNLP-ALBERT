@@ -189,80 +189,92 @@ results/parameter_sharing_results.csv
 The generated results include parameter counts, evaluation metrics, training time, GPU memory usage, and task-specific metrics (e.g., F1 score for MRPC) for each configuration.
 
 
-### Experiment 3: Factorized Embeddings
 
-Compares standard embeddings and ALBERT-style factorized embeddings.
+# Experiment 3 — Factorized Embeddings
 
-Configurations:
+Reproduction and extension of ALBERT's factorized embedding parameterization: factorizing
+the token-embedding matrix (V x H into V x E + E x H) reduces parameters without strongly
+hurting performance. Reproduced on SST-2 and MRPC, with an embedding-size sweep as extension.
 
-- standard embeddings
-- factorized embeddings
+## Notebooks
 
-Parameter-count run:
+- `exp3_factorized_embeddings.ipynb` — main notebook: parameter analysis, SST-2 reproduction, and the embedding-size sweep extension.
+- `mrpc.ipynb` — companion notebook: factorized-embedding reproduction on MRPC.
 
+## Method
+
+Standard and factorized configurations are identical except for `embedding_size`
+(768 vs 128), isolating factorization as the only changed variable. Models are randomly
+initialized (`from_config`) and fine-tuned for 3 epochs. Results are appended to
+`results/embedding_results.csv`.
+
+## 1. Reproduction on SST-2
+
+Standard (E=768) vs factorized (E=128) embeddings on SST-2.
+
+Parameter-count only (no training, fast):
 ```bash
 python experiments/factorized_embeddings/run_factorized_embeddings.py
 ```
 
-Optional training run:
-
+Full fine-tuning (uses the default SST-2 configs):
 ```bash
 python experiments/factorized_embeddings/run_factorized_embeddings.py --train
 ```
 
-Output:
+Result: factorization cuts embedding parameters about 6x (23.4M to 3.9M) and total
+parameters about 63% (31.7M to 11.7M), at about 1 point of accuracy cost
+(standard 82.5% vs factorized 81.3%).
 
-```text
-results/embedding_results.csv
-```
+## 2. Reproduction on MRPC
 
-## Extension: Low-Data Robustness
-
-The extension compares BERT-base and ALBERT-base on the same GLUE tasks as the reproduction experiment, but with reduced training-data fractions.
-
-Tasks:
-
-- SST-2
-- MRPC
-- RTE
-- MNLI (`validation_matched`)
-
-Fractions:
-
-- 10%
-- 25%
-- 50%
-
-Default configuration matrix:
-
-```text
-configs/low_data_extension/low_data_matrix.yaml
-```
-
-Run:
+Same comparison on MRPC, a sentence-pair paraphrase task scored with accuracy and F1.
 
 ```bash
-python experiments/low_data_extension/run_low_data_extension.py
+python experiments/factorized_embeddings/run_factorized_embeddings.py --train \
+  --config configs/factorized_embeddings/standard_embeddings_mrpc.yaml \
+  --config configs/factorized_embeddings/factorized_embeddings_mrpc.yaml
 ```
 
-Useful subset runs:
+Result: same parameter reduction. Both models converge to the majority-class baseline
+(about 68% accuracy / 81% F1), expected for randomly-initialized models on MRPC's small
+training set (about 3,700 pairs). Both behave identically, so the comparison stays valid.
+
+## 3. Extension — embedding-size sweep
+
+Sweeps the embedding size E over {64, 128, 768} on SST-2 (20% of the data, via
+`train_fraction: 0.2`) to map the accuracy/parameter trade-off and ask whether ALBERT's
+choice of a small E is justified.
 
 ```bash
-# Inspect the expanded model × task × fraction grid.
-python experiments/low_data_extension/run_low_data_extension.py --list-configs
-
-# Verify the pipeline with tiny subsets before launching expensive runs.
-python experiments/low_data_extension/run_low_data_extension.py --smoke-test
-
-# Run only one task/fraction/model combination.
-python experiments/low_data_extension/run_low_data_extension.py --only-task sst2 --only-fraction 0.1 --only-model albert-base-v2
+python experiments/factorized_embeddings/run_factorized_embeddings.py --train \
+  --config configs/factorized_embeddings/sweep_e64_sst2.yaml \
+  --config configs/factorized_embeddings/sweep_e128_sst2.yaml \
+  --config configs/factorized_embeddings/sweep_e768_sst2.yaml
 ```
 
-Output:
+Result: accuracy rises only about 4.6 points (73.2% to 77.8%) as E grows 12x (64 to 768),
+while total parameters more than triple — strongly diminishing returns that support
+ALBERT's choice of a small embedding size.
 
-```text
-results/low_data_results.csv
-```
+## Configs
+
+In `configs/factorized_embeddings/`:
+- `standard_embeddings.yaml`, `factorized_embeddings.yaml` — SST-2 (E=768 vs E=128)
+- `standard_embeddings_mrpc.yaml`, `factorized_embeddings_mrpc.yaml` — MRPC
+- `sweep_e64_sst2.yaml`, `sweep_e128_sst2.yaml`, `sweep_e768_sst2.yaml` — extension sweep
+
+## Outputs
+
+- `results/embedding_results.csv` — all runs (parameters, accuracy, F1, timing).
+- `plots/extension_accuracy_vs_E.png` — accuracy vs embedding size figure.
+
+## Notes
+
+Models are randomly initialized rather than pretrained, so absolute accuracy is modest;
+the relative comparisons (standard vs factorized, and accuracy vs E) are the valid results.
+Training requires `accelerate` and a GPU is recommended. Run commands from the repo root.
+
 
 ## Project Structure
 
